@@ -93,13 +93,15 @@ struct serial_port
         return false;
     }
 
-    bool read_until(std::string expected)
+    bool read_until(std::string expected, std::string *data = nullptr)
     {
         std::string buffer(1, '\0');
         while (ReadFile(hPort, &buffer[buffer.length() - 1], 1, NULL, NULL)) {
-            if (buffer.size() >= expected.size())
-                if (buffer.substr(buffer.size() - expected.size(), expected.size()) == expected)
-                    return true;
+            if (buffer.size() >= expected.size() && buffer.substr(buffer.size() - expected.size(), expected.size()) == expected) {
+                if (data != nullptr)
+                    *data = buffer;
+                return true;
+            }
             buffer += '\0';
         }
         return false;
@@ -148,6 +150,18 @@ bool ReadScreenshotFromNanoVNA(std::wstring port_unc_path, screenshot &screensho
         return false;
     if (!nano_vna.read_until("\r\nch> "))
         return false;
+
+    std::string info;
+    if (!nano_vna.write("info\r\n"))
+        return false;
+    if (!nano_vna.read_until("\r\nch> ", &info))
+        return false;
+    
+    std::string expected_info = "info\r\nBoard: NanoVNA-H 4\r\n";
+    if (info.substr(0, expected_info.length()) != expected_info) {
+        std::wcerr << L"Connected board type is not NanoVNA-H 4!" << std::endl;
+        return false;
+    }
 
     if (!nano_vna.write("capture\r\n"))
         return false;
