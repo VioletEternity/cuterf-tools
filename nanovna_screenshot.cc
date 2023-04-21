@@ -146,9 +146,9 @@ bool ReadScreenshotFromNanoVNA(std::wstring port_unc_path, screenshot &screensho
     if (!nano_vna.open(port_unc_path))
         return false;
 
-    if (!nano_vna.write("\r\n"))
+    if (!nano_vna.write("#sync#\r\n"))
         return false;
-    if (!nano_vna.read_until("\r\nch> "))
+    if (!nano_vna.read_until("#sync#\r\n#sync#?\r\nch> "))
         return false;
 
     std::string info;
