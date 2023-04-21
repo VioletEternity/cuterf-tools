@@ -21,7 +21,7 @@ bool FindUSBSerialPortByVIDPID(uint16_t VID, uint16_t PID, std::wstring &port_un
     SP_DEVINFO_DATA DeviceInfoData = {};
     DWORD dwDeviceIndex = 0;
     DeviceInfoData.cbSize = sizeof(DeviceInfoData);
-    while (SetupDiEnumDeviceInfo(hDeviceInfoSet, dwDeviceIndex, &DeviceInfoData)) {
+    while (SetupDiEnumDeviceInfo(hDeviceInfoSet, dwDeviceIndex++, &DeviceInfoData)) {
         WCHAR szHardwareId[128];
         DWORD dwHardwareIdSize = 0;
         if (SetupDiGetDeviceRegistryProperty(hDeviceInfoSet, &DeviceInfoData, SPDRP_HARDWAREID, NULL, (LPBYTE)szHardwareId, (DWORD)sizeof(szHardwareId) * sizeof(WCHAR), &dwHardwareIdSize)) {
