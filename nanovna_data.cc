@@ -3,7 +3,7 @@
 
 #include "libnanovna.h"
 
-bool save_to_file(const std::wstring &path, const std::string &touchstone)
+bool save_touchstone_to_file(const std::wstring &path, const std::string &touchstone)
 {
     FILE *f = _wfopen(path.c_str(), L"wt");
     if (!f)
@@ -55,6 +55,10 @@ int wmain(int argc, wchar_t** argv)
     }
     if (show_usage) {
         std::wcerr << L"Usage: nanovna_data.exe [options] [filename.s1p,s2p]" << std::endl;
+        std::wcerr << std::endl;
+        std::wcerr << L"Writes a capture of the data displayed on screen to a Touchstone format file," << std::endl;
+        std::wcerr << L"without initiating a sweep." << std::endl;
+        std::wcerr << std::endl;
         std::wcerr << L"Options:" << std::endl;
         std::wcerr << "\t/?\t\tShow program usage." << std::endl;
         std::wcerr << "\t/s1p\t\tSave measurements of 1-port network." << std::endl;
@@ -94,11 +98,11 @@ int wmain(int argc, wchar_t** argv)
         return EXIT_FAILURE;
     }
 
-    if (!save_to_file(output_path, touchstone)) {
-        std::wcerr << L"Failed to write data to '" << output_path << L"'!" << std::endl;
+    if (!save_touchstone_to_file(output_path, touchstone)) {
+        std::wcerr << L"Failed to write Touchstone data to '" << output_path << L"'!" << std::endl;
         return EXIT_FAILURE;
     }
 
-    std::wcerr << L"Saved data to '" << output_path << L"'" << std::endl;
+    std::wcerr << L"Saved Touchstone data to '" << output_path << L"'" << std::endl;
     return EXIT_SUCCESS;
 }

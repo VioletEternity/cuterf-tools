@@ -1,9 +1,10 @@
 #include <cstdint>
 #include <iostream>
 #include <iomanip>
-#include <vector>
 #include <png.h>
 #include "libnanovna.h"
+
+static const std::string SOFTWARE_NAME = "https://github.com/VioletEternity/nanovna-tools";
 
 struct screenshot 
 {
@@ -44,7 +45,7 @@ struct screenshot
             data[i / 2] = (raw_data[i] << 8) | (raw_data[i + 1] & 0xff);
     }
 
-    bool save_to_png_file(const std::wstring &path, unsigned scale)
+    bool save_to_png_file(const std::wstring &path, unsigned scale, const std::string &source, const std::string &creation_time, const std::string &touchstone)
     {
         FILE *file = NULL;
         png_structp png = NULL;
@@ -54,15 +55,15 @@ struct screenshot
         bool result = false;
         
         file = _wfopen(path.c_str(), L"wb");
-        if (!file) 
+        if (file == NULL) 
             goto done;
 
         png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-        if (!png)
+        if (png == NULL)
             goto done;
 
         info = png_create_info_struct(png);
-        if (!info)
+        if (info == NULL)
             goto done;
 
         if (setjmp(png_jmpbuf(png)))
@@ -78,6 +79,25 @@ struct screenshot
         for (size_t row = 0; row < display_height * scale; row++)
             rows.push_back(&rgb24_data[3 * display_width * scale * row]);
         png_set_rows(png, info, &rows[0]);
+
+        png_text texts[4];
+        texts[0].key = "Software";
+        texts[0].compression = PNG_TEXT_COMPRESSION_NONE;
+        texts[0].text = const_cast<png_charp>(SOFTWARE_NAME.c_str());
+        texts[0].text_length = SOFTWARE_NAME.length();
+        texts[1].key = "Source";
+        texts[1].compression = PNG_TEXT_COMPRESSION_NONE;
+        texts[1].text = const_cast<png_charp>(source.c_str());
+        texts[1].text_length = source.length();
+        texts[2].key = "Creation Time";
+        texts[2].compression = PNG_TEXT_COMPRESSION_NONE;
+        texts[2].text = const_cast<png_charp>(creation_time.c_str());
+        texts[2].text_length = creation_time.length();
+        texts[3].key = "Touchstone";
+        texts[3].compression = PNG_TEXT_COMPRESSION_zTXt;
+        texts[3].text = const_cast<png_charp>(touchstone.c_str());
+        texts[3].text_length = touchstone.length();
+        png_set_text(png, info, texts, sizeof(texts) / sizeof(texts[0]));
 
         png_init_io(png, file);
         png_write_png(png, info, PNG_TRANSFORM_IDENTITY, 0);
@@ -141,6 +161,10 @@ int wmain(int argc, wchar_t** argv)
     }
     if (show_usage) {
         std::wcerr << L"Usage: nanovna_screenshot.exe [options] [filename.png]" << std::endl;
+        std::wcerr << std::endl;
+        std::wcerr << L"Writes a screen capture to a PNG file. The PNG file includes all acquired data" << std::endl;
+        std::wcerr << L"in Touchstone format for a 2-port network in the \"Touchstone\" tEXt chunk." << std::endl;
+        std::wcerr << std::endl;
         std::wcerr << L"Options:" << std::endl;
         std::wcerr << "\t/?\t\tShow program usage." << std::endl;
         std::wcerr << "\t/scale:N, /xN\tEnlarge image by factor of N (1 <= N <= 4)." << std::endl;
@@ -150,6 +174,7 @@ int wmain(int argc, wchar_t** argv)
         screenshot_path = L"NanoVNA_Screenshot_" + current_date_time_for_filename() + L".png";
 
     screenshot screenshot;
+    std::string source, creation_time, touchstone;
     try {
         libnanovna::nanovna device;
         if (!device.open()) {
@@ -158,12 +183,15 @@ int wmain(int argc, wchar_t** argv)
         }
         std::wcerr << "Found NanoVNA at '" << device.path() << L"'" << std::endl;
         screenshot.read_from_nanovna(device);
+        source = device.board_name() + " (firmware " + device.firmware_info() + ")";
+        creation_time = device.timestamp();
+        touchstone = device.capture_touchstone(2);
     } catch (const std::runtime_error &e) {
         std::wcerr << L"Failed to read screenshot from NanoVNA: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 
-    if (!screenshot.save_to_png_file(screenshot_path, (unsigned)scale)) {
+    if (!screenshot.save_to_png_file(screenshot_path, (unsigned)scale, source, creation_time, touchstone)) {
         std::wcerr << L"Failed to write screenshot to '" << screenshot_path << L"'!" << std::endl;
         return EXIT_FAILURE;
     }
