@@ -9,5 +9,8 @@ add_definitions(
     -D_UNICODE
     -D_CRT_SECURE_NO_WARNINGS)
 
+add_library(nanovna libnanovna.h libnanovna.cc)
+target_link_libraries(nanovna PRIVATE setupapi)
+
 add_executable(nanovna_screenshot nanovna_screenshot.cc)
-target_link_libraries(nanovna_screenshot PRIVATE setupapi PNG::PNG)
+target_link_libraries(nanovna_screenshot PRIVATE nanovna PNG::PNG)
