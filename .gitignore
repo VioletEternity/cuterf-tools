@@ -1,2 +1,4 @@
 /.vscode
 /build
+*.s[12]p
+*.png

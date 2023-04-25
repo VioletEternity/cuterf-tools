@@ -3,19 +3,14 @@
 
 #include "libnanovna.h"
 
-std::string current_date_time()
+bool save_to_file(const std::wstring &path, const std::string &touchstone)
 {
-    time_t now = time(NULL);
-    struct tm *timeinfo = localtime(&now);
-
-    std::stringstream ss;
-    ss << 1900 + timeinfo->tm_year;
-    ss << '-' << std::setw(2) << std::setfill('0') << timeinfo->tm_mon + 1;
-    ss << '-' << std::setw(2) << std::setfill('0') << timeinfo->tm_mday;
-    ss << ' ' << std::setw(2) << std::setfill('0') << timeinfo->tm_hour;
-    ss << ':' << std::setw(2) << std::setfill('0') << timeinfo->tm_min;
-    ss << ':' << std::setw(2) << std::setfill('0') << timeinfo->tm_sec;
-    return ss.str();
+    FILE *f = _wfopen(path.c_str(), L"wt");
+    if (!f)
+        return false;
+    fwrite(touchstone.c_str(), 1, touchstone.length(), f);
+    fclose(f);
+    return true;
 }
 
 std::wstring current_date_time_for_filename()
@@ -32,33 +27,6 @@ std::wstring current_date_time_for_filename()
     ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_min;
     ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_sec;
     return ss.str();
-}
-
-bool save_snp_to_file(const std::wstring &path, const std::string &board, const std::string &version, const std::vector<libnanovna::point> &data, unsigned ports)
-{
-    FILE *f = _wfopen(path.c_str(), L"wt");
-    if (!f)
-        return false;
-    
-    fprintf(f, "! Measured with %s (Version: %s)\n", board.c_str(), version.c_str());
-    fprintf(f, "! Date: %s\n", current_date_time().c_str());
-    fprintf(f, "# HZ S RI R 50\n");
-    for (size_t idx = 0; idx < data.size(); idx++) {
-        if (ports == 1)
-            fprintf(f, "%10d %12.9f %12.9f\n",
-                data[idx].freq,
-                data[idx].s11.real(), data[idx].s11.imag());
-        if (ports == 2)
-            fprintf(f, "%10d %12.9f %12.9f %12.9f %12.9f %12.9f %12.9f %12.9f %12.9f\n",
-                data[idx].freq,
-                data[idx].s11.real(), data[idx].s11.imag(),
-                data[idx].s21.real(), data[idx].s21.imag(),
-                0.0f, 0.0f,
-                0.0f, 0.0f);
-    }
-    
-    fclose(f);
-    return true;
 }
 
 int wmain(int argc, wchar_t** argv) 
@@ -112,8 +80,7 @@ int wmain(int argc, wchar_t** argv)
         }
     }
 
-    std::string board, version;
-    std::vector<libnanovna::point> data;
+    std::string touchstone;
     try {
         libnanovna::nanovna device;
         if (!device.open()) {
@@ -121,15 +88,13 @@ int wmain(int argc, wchar_t** argv)
             return EXIT_FAILURE;
         }
         std::wcerr << "Found NanoVNA at '" << device.path() << L"'" << std::endl;
-        board = device.board();
-        version = device.version();
-        data = device.capture_data(ports);
+        touchstone = device.capture_touchstone(ports);
     } catch (const std::runtime_error &e) {
         std::wcerr << L"Failed to read data from NanoVNA: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 
-    if (!save_snp_to_file(output_path, board, version, data, ports)) {
+    if (!save_to_file(output_path, touchstone)) {
         std::wcerr << L"Failed to write data to '" << output_path << L"'!" << std::endl;
         return EXIT_FAILURE;
     }

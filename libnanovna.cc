@@ -1,5 +1,7 @@
 #include <cstdint>
 #include <string>
+#include <iostream>
+#include <iomanip>
 #include <stdexcept>
 #include <initguid.h>
 #include <windows.h>
@@ -149,14 +151,29 @@ std::wstring nanovna::path() const
     return m_i->m_path;
 }
 
-std::string nanovna::board() const
+std::string nanovna::board_name() const
 {
     return m_i->m_board;
 }
 
-std::string nanovna::version() const
+std::string nanovna::firmware_info() const
 {
     return m_i->m_version;
+}
+
+std::string nanovna::timestamp()
+{
+    time_t now = time(NULL);
+    struct tm *timeinfo = localtime(&now);
+
+    std::stringstream ss;
+    ss << 1900 + timeinfo->tm_year;
+    ss << '-' << std::setw(2) << std::setfill('0') << timeinfo->tm_mon + 1;
+    ss << '-' << std::setw(2) << std::setfill('0') << timeinfo->tm_mday;
+    ss << ' ' << std::setw(2) << std::setfill('0') << timeinfo->tm_hour;
+    ss << ':' << std::setw(2) << std::setfill('0') << timeinfo->tm_min;
+    ss << ':' << std::setw(2) << std::setfill('0') << timeinfo->tm_sec;
+    return ss.str();
 }
 
 bool nanovna::is_open() const
@@ -240,6 +257,15 @@ std::string nanovna::capture_screenshot()
     return display_data;
 }
 
+std::vector<std::string> nanovna::capture_header()
+{
+    std::vector<std::string> environment;
+    environment.push_back("Board: " + board_name());
+    environment.push_back("Firmware: " + firmware_info());
+    environment.push_back("Timestamp: " + timestamp());
+    return environment;
+}
+
 std::vector<point> nanovna::capture_data(unsigned ports)
 {   
     if (!(ports == 1 || ports == 2))
@@ -296,6 +322,37 @@ std::vector<point> nanovna::capture_data(unsigned ports)
     }
 
     return data;
+}
+
+std::string nanovna::capture_touchstone(unsigned ports)
+{
+    auto header = capture_header();
+    auto data = capture_data(ports);
+
+    std::stringstream ss;
+    for (auto &line : header)
+        ss << "! " << line << '\n';
+    ss << "# HZ S RI R 50\n";
+    for (auto &point : data) {
+        std::vector<float> sxy;
+        if (ports == 1 || ports == 2) {
+            sxy.push_back(point.s11.real());
+            sxy.push_back(point.s11.imag());
+        }
+        if (ports == 2) {
+            sxy.push_back(point.s21.real());
+            sxy.push_back(point.s21.imag());
+            sxy.push_back(0.0f); // s12.re
+            sxy.push_back(0.0f); // s12.im
+            sxy.push_back(0.0f); // s22.re
+            sxy.push_back(0.0f); // s22.im
+        }
+        ss << std::setw(10) << point.freq;
+        for (auto s : sxy)
+            ss << ' ' << std::fixed << std::setw(12) << std::showpos << std::setprecision(9) << s;
+        ss << '\n';
+    }
+    return ss.str();
 }
 
 }

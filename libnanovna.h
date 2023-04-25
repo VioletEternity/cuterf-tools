@@ -30,15 +30,19 @@ public:
 
     std::wstring path() const;
 
-    std::string board() const;
-    std::string version() const;
+    std::string board_name() const;
+    std::string firmware_info() const;
+    std::string timestamp(); // host timestamp at the moment
 
     bool is_open() const;
     bool open(const std::wstring &path = L"");
     void close();
 
     std::string capture_screenshot();
+
+    std::vector<std::string> capture_header();
     std::vector<point> capture_data(unsigned ports);
+    std::string capture_touchstone(unsigned ports);
 };
 
 };
