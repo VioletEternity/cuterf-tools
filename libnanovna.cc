@@ -63,8 +63,7 @@ struct serial_port
 
     ~serial_port() 
     {
-        CloseHandle(hPort);
-        hPort = INVALID_HANDLE_VALUE;
+        close();
     }
 
     bool is_open() const
@@ -89,41 +88,51 @@ struct serial_port
         return true;
     }
 
+    void close()
+    {
+        CloseHandle(hPort);
+        hPort = INVALID_HANDLE_VALUE;
+    }
+
     void write(std::string data)
     {
         if (!WriteFile(hPort, &data[0], (DWORD)data.size(), NULL, NULL))
             throw std::runtime_error("WriteFile() failed");
     }
 
-    bool read(std::string &data)
+    void read(std::string &data)
     {
         if (!ReadFile(hPort, &data[0], (DWORD)data.size(), NULL, NULL))
             throw std::runtime_error("ReadFile() failed");
     }
 
-    bool read_until(std::string expected, std::string *data = nullptr)
+    void read_until(std::string expected, std::string *data = nullptr)
     {
         std::string buffer(1, '\0');
         while (ReadFile(hPort, &buffer[buffer.length() - 1], 1, NULL, NULL)) {
             if (buffer.size() >= expected.size() && buffer.substr(buffer.size() - expected.size(), expected.size()) == expected) {
                 if (data != nullptr)
                     *data = buffer;
-                return true;
+                return;
             }
             buffer += '\0';
         }
-        return false;
+        throw std::runtime_error("ReadFile() failed");
     }
 };
 
 }
 
-class nanovna_impl {
+class nanovna_impl 
+{
 public:
     std::wstring m_path;
     serial_port m_port;
+    std::string m_board, m_version;
 
     void synchronize();
+    std::string run(const std::string &command);
+
     void detect_board();
 };
 
@@ -138,6 +147,16 @@ nanovna::~nanovna()
 std::wstring nanovna::path() const
 {
     return m_i->m_path;
+}
+
+std::string nanovna::board() const
+{
+    return m_i->m_board;
+}
+
+std::string nanovna::version() const
+{
+    return m_i->m_version;
 }
 
 bool nanovna::is_open() const
@@ -159,20 +178,49 @@ bool nanovna::open(const std::wstring &path)
     return true;
 }
 
+void nanovna::close()
+{
+    m_i->m_port.close();
+    m_i->m_board.clear();
+    m_i->m_version.clear();
+}
+
 void nanovna_impl::synchronize()
 {
     m_port.write("#sync#\r\n");
     m_port.read_until("#sync#\r\n#sync#?\r\nch> ");
 }
 
+std::string nanovna_impl::run(const std::string &command)
+{
+    std::string result;
+    m_port.write(command + "\r\n");
+    m_port.read_until(command + "\r\n");
+    m_port.read_until("ch> ", &result);
+    return result;
+}
+
 void nanovna_impl::detect_board()
 {   
-    std::string info;
-    m_port.write("info\r\n");
-    m_port.read_until("\r\nch> ", &info);
+    std::string info = run("info");
     
-    std::string expected_info = "info\r\nBoard: NanoVNA-H 4\r\n";
-    if (info.substr(0, expected_info.length()) != expected_info)
+    size_t board_pos = info.find("Board: ");
+    if (board_pos == std::string::npos)
+        throw std::runtime_error("cannot parse board from response to info!");
+    size_t board_nl_pos = info.find("\r\n", board_pos);
+    if (board_nl_pos == std::string::npos)
+        throw std::runtime_error("cannot parse board from response to info!");
+    m_board = info.substr(board_pos, board_nl_pos - board_pos).substr(7);
+
+    size_t version_pos = info.find("Version: ", board_nl_pos);
+    if (version_pos == std::string::npos)
+        throw std::runtime_error("cannot parse version from response to info!");
+    size_t version_nl_pos = info.find("\r\n", version_pos);
+    if (version_nl_pos == std::string::npos)
+        throw std::runtime_error("cannot parse version from response to info!");
+    m_version = info.substr(version_pos, version_nl_pos - version_pos).substr(9);
+
+    if (m_board != "NanoVNA-H 4")
         throw std::runtime_error("connected board type is not NanoVNA-H 4!");
 }
 
@@ -190,6 +238,64 @@ std::string nanovna::capture_screenshot()
         throw std::runtime_error("device returned screenshot of wrong size!");
     
     return display_data;
+}
+
+std::vector<point> nanovna::capture_data(unsigned ports)
+{   
+    if (!(ports == 1 || ports == 2))
+        throw std::logic_error("can only capture data for 1 or 2 ports!");
+ 
+    size_t pos;
+    std::string buf;
+
+    buf = m_i->run("sweep");
+    unsigned start = std::stoi(buf, &pos);
+    if (pos == 0 || buf[pos] != ' ')
+        throw std::runtime_error("unrecognized format of response to sweep!");
+
+    buf = buf.substr(pos);
+    unsigned stop = std::stoi(buf, &pos);
+    if (pos == 0 || buf[pos] != ' ')
+        throw std::runtime_error("failed to parse response to sweep!");
+
+    buf = buf.substr(pos);
+    unsigned points = std::stoi(buf, &pos);
+    if (pos == 0 || buf.substr(pos, 2) != "\r\n")
+        throw std::runtime_error("failed to parse response to sweep!");
+    
+    // see set_frequencies() in firmware
+    unsigned f_points, f_delta, f_error;
+    f_points = points - 1;
+    f_delta  = (stop - start) / f_points;
+    f_error  = (stop - start) % f_points;
+
+    // see getFrequency() in firmware
+    std::vector<point> data(points);
+    for (unsigned idx = 0; idx < points; idx++)
+        data[idx].freq = start + f_delta * idx + (f_points / 2 + f_error * idx) / f_points;
+
+    for (unsigned port = 1; port <= ports; port++) {
+        buf = m_i->run("data " + std::to_string(port));
+        for (unsigned idx = 0; idx < points; idx++) {
+            float re = std::stof(buf, &pos);
+            if (pos == 0 || buf[pos] != ' ')
+                throw std::runtime_error("failed to parse response to data!");
+            
+            buf = buf.substr(pos);
+            float im = std::stof(buf, &pos);
+            if (pos == 0 || buf.substr(pos, 2) != "\r\n")
+                throw std::runtime_error("failed to parse response to data!");
+            
+            if (port == 1)
+                data[idx].s11 = std::complex<float>(re, im);
+            if (port == 2)
+                data[idx].s21 = std::complex<float>(re, im);
+            
+            buf = buf.substr(pos);
+        }
+    }
+
+    return data;
 }
 
 }

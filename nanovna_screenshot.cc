@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <iostream>
+#include <iomanip>
 #include <vector>
-#include <strsafe.h>
 #include <png.h>
 #include "libnanovna.h"
 
@@ -92,6 +92,22 @@ struct screenshot
     }
 };
 
+std::wstring current_date_time_for_filename()
+{
+    time_t now = time(NULL);
+    struct tm *timeinfo = localtime(&now);
+
+    std::wstringstream ss;
+    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_year % 100;
+    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_mon + 1;
+    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_mday;
+    ss << '_';
+    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_hour;
+    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_min;
+    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_sec;
+    return ss.str();
+}
+
 int wmain(int argc, wchar_t** argv) 
 {
     bool show_usage = false;
@@ -124,22 +140,14 @@ int wmain(int argc, wchar_t** argv)
         }
     }
     if (show_usage) {
-        std::wcerr << L"Usage: nanovna_screenshot.exe [options] [filename]" << std::endl;
+        std::wcerr << L"Usage: nanovna_screenshot.exe [options] [filename.png]" << std::endl;
         std::wcerr << L"Options:" << std::endl;
         std::wcerr << "\t/?\t\tShow program usage." << std::endl;
         std::wcerr << "\t/scale:N, /xN\tEnlarge image by factor of N (1 <= N <= 4)." << std::endl;
         return usage_status;
     }
-    if (screenshot_path.empty()) {
-        time_t now = time(NULL);
-        struct tm *timeinfo = localtime(&now);
-        wchar_t buffer[128];
-        StringCchPrintf(buffer, sizeof(buffer), 
-            L"NanoVNA_Screenshot_%02d%02d%02d_%02d%02d%02d.png",
-            timeinfo->tm_year % 100, timeinfo->tm_mon + 1, timeinfo->tm_mday,
-            timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
-        screenshot_path = std::wstring(buffer);
-    }
+    if (screenshot_path.empty())
+        screenshot_path = L"NanoVNA_Screenshot_" + current_date_time_for_filename() + L".png";
 
     screenshot screenshot;
     try {
