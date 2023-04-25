@@ -275,7 +275,7 @@ std::vector<point> nanovna::capture_data(unsigned ports)
         data[idx].freq = start + f_delta * idx + (f_points / 2 + f_error * idx) / f_points;
 
     for (unsigned port = 1; port <= ports; port++) {
-        buf = m_i->run("data " + std::to_string(port));
+        buf = m_i->run("data " + std::to_string(port - 1));
         for (unsigned idx = 0; idx < points; idx++) {
             float re = std::stof(buf, &pos);
             if (pos == 0 || buf[pos] != ' ')
