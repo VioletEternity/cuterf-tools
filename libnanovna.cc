@@ -114,7 +114,7 @@ struct serial_port
         while (ReadFile(hPort, &buffer[buffer.length() - 1], 1, NULL, NULL)) {
             if (buffer.size() >= expected.size() && buffer.substr(buffer.size() - expected.size(), expected.size()) == expected) {
                 if (data != nullptr)
-                    *data = buffer;
+                    *data = buffer.substr(0, buffer.size() - expected.size());
                 return;
             }
             buffer += '\0';
@@ -241,6 +241,26 @@ void nanovna_impl::detect_board()
         throw std::runtime_error("connected board type is not NanoVNA-H 4!");
 }
 
+float nanovna::edelay()
+{
+    std::string buf = m_i->run("edelay");
+    size_t pos;
+    float edelay = std::stof(&buf[0], &pos);
+    if (buf.substr(pos) != "\r\n")
+        throw std::runtime_error("failed to parse response to edelay!");
+    return edelay;
+}
+
+float nanovna::s21offset()
+{
+    std::string buf = m_i->run("s21offset");
+    size_t pos;
+    float s21offset = std::stof(&buf[0], &pos);
+    if (buf.substr(pos) != "\r\n")
+        throw std::runtime_error("failed to parse response to s21offset!");
+    return s21offset;
+}
+
 std::string nanovna::capture_screenshot()
 {   
     m_i->m_port.write("capture\r\n");
@@ -263,6 +283,12 @@ std::vector<std::string> nanovna::capture_header()
     environment.push_back("Board: " + board_name());
     environment.push_back("Firmware: " + firmware_info());
     environment.push_back("Timestamp: " + timestamp());
+    float edelay = this->edelay();
+    if (edelay != 0.0f)
+        environment.push_back("E-delay: " + std::to_string(edelay) + " ps");
+    float s21offset = this->s21offset();
+    if (s21offset != 0.0f)
+        environment.push_back("S21 offset: " + std::to_string(s21offset) + " dB");
     return environment;
 }
 

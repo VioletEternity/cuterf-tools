@@ -34,6 +34,9 @@ public:
     std::string firmware_info() const;
     std::string timestamp(); // host timestamp at the moment
 
+    float edelay(); // in ps
+    float s21offset(); // in dB
+
     bool is_open() const;
     bool open(const std::wstring &path = L"");
     void close();
