@@ -1,8 +1,10 @@
-# nanovna-tools
+# cuterf-tools
 
-Tools for working with a [NanoVNA](https://nanovna.com/) connected to a Windows PC.
+Tools for working with [NanoVNA](https://nanovna.com/) and [TinySA](https://tinysa.org) connected to a Windows PC.
 
-Only NanoVNA-H 4 is supported.
+In the NanoVNA device family, only NanoVNA-H 4 is supported.
+
+In the TinySA device family, both TinySA and TinySA Ultra are supported.
 
 ## nanovna_screenshot.exe
 
@@ -41,4 +43,16 @@ omitted.
 
 Options:
         /?              Show program usage.
+```
+
+## tinysa_screenshot.exe
+
+```
+Usage: tinysa_screenshot.exe [options] [filename.png]
+
+Writes a screen capture to a PNG file.
+
+Options:
+        /?              Show program usage.
+        /scale:N, /xN   Enlarge image by factor of N (1 <= N <= 4).
 ```

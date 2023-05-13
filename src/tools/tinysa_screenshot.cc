@@ -1,4 +1,3 @@
-#include <png.h>
 #include <cuterf.h>
 #include "common.h"
 
@@ -36,10 +35,9 @@ int wmain(int argc, wchar_t** argv)
         }
     }
     if (show_usage) {
-        std::wcerr << L"Usage: nanovna_screenshot.exe [options] [filename.png]" << std::endl;
+        std::wcerr << L"Usage: tinysa_screenshot.exe [options] [filename.png]" << std::endl;
         std::wcerr << std::endl;
-        std::wcerr << L"Writes a screen capture to a PNG file. The PNG file includes all acquired data" << std::endl;
-        std::wcerr << L"in Touchstone format for a 2-port network in the \"Touchstone\" tEXt chunk." << std::endl;
+        std::wcerr << L"Writes a screen capture to a PNG file." << std::endl;
         std::wcerr << std::endl;
         std::wcerr << L"Options:" << std::endl;
         std::wcerr << "\t/?\t\tShow program usage." << std::endl;
@@ -47,31 +45,28 @@ int wmain(int argc, wchar_t** argv)
         return usage_status;
     }
     if (screenshot_path.empty())
-        screenshot_path = L"NanoVNA_Screenshot_" + current_date_time_for_filename() + L".png";
+        screenshot_path = L"TinySA_Screenshot_" + current_date_time_for_filename() + L".png";
 
-    std::string screen_raw_data, source, creation_time, touchstone;
+    std::string screen_raw_data, source, touchstone;
     size_t screen_width, screen_height;
     try {
-        nanovna::device device;
+        tinysa::device device;
         if (!device.open()) {
-            std::wcerr << L"Cannot find a connected NanoVNA!" << std::endl;
+            std::wcerr << L"Cannot find a connected TinySA!" << std::endl;
             return EXIT_FAILURE;
         }
-        std::wcerr << "Found NanoVNA at '" << device.path() << L"'" << std::endl;
+        std::wcerr << "Found TinySA at '" << device.path() << L"'" << std::endl;
         screen_raw_data = device.capture_screenshot(screen_width, screen_height);
-        source = device.board_name() + " (firmware " + device.firmware_info() + ")";
-        creation_time = device.timestamp();
-        touchstone = device.capture_touchstone(2);
+        source = std::string("tinySA ") + (device.is_ultra() ? "Ultra " : "");
+        source += "(hardware " + device.hardware_version() + ", firmware " + device.firmware_version() + ")";
     } catch (const std::runtime_error &e) {
-        std::wcerr << L"Failed to read screenshot from NanoVNA: " << e.what() << std::endl;
+        std::wcerr << L"Failed to read screenshot from TinySA: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 
     rgb565_pixmap pixmap(screen_width, screen_height);
     pixmap.read_from_capture(screen_raw_data);
-    creation_time[4] = ':'; // PNG uses YYYY:mm:dd HH:MM
-    creation_time[7] = ':';
-    if (!pixmap.save_to_png_file(screenshot_path, (unsigned)scale, source, creation_time, "Touchstone", touchstone)) {
+    if (!pixmap.save_to_png_file(screenshot_path, (unsigned)scale, source, current_date_time_for_metadata())) {
         std::wcerr << L"Failed to write screenshot to '" << screenshot_path << L"'!" << std::endl;
         return EXIT_FAILURE;
     }

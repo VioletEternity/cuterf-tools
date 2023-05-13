@@ -28,21 +28,6 @@ device::~device()
     delete m_i; 
 }
 
-std::wstring device::path() const
-{
-    return m_i->m_path;
-}
-
-std::string device::board_name() const
-{
-    return m_i->m_board;
-}
-
-std::string device::firmware_info() const
-{
-    return m_i->m_version;
-}
-
 std::string device::timestamp()
 {
     time_t now = time(NULL);
@@ -61,6 +46,11 @@ std::string device::timestamp()
 bool device::is_open() const
 {
     return m_i->m_port.is_open();
+}
+
+std::wstring device::path() const
+{
+    return m_i->m_path;
 }
 
 bool device::open(const std::wstring &path)
@@ -123,6 +113,16 @@ void device_impl::detect_board()
         throw std::runtime_error("connected board type is not NanoVNA-H 4!");
 }
 
+std::string device::board_name() const
+{
+    return m_i->m_board;
+}
+
+std::string device::firmware_info() const
+{
+    return m_i->m_version;
+}
+
 float device::edelay()
 {
     std::string buf = m_i->run("edelay");
@@ -143,12 +143,16 @@ float device::s21offset()
     return s21offset;
 }
 
-std::string device::capture_screenshot()
+std::string device::capture_screenshot(size_t &width, size_t &height)
 {   
+    // only one resolution supported at the moment
+    width = 480;
+    height = 320;
+
     m_i->m_port.write("capture\r\n");
     m_i->m_port.read_until("capture\r\n");
 
-    std::string display_data(2 * 480 * 320, '\0'); // only one resolution supported at the moment
+    std::string display_data(2 * width * height, '\0');
     m_i->m_port.read(display_data);
 
     std::string prompt(4, '\0');

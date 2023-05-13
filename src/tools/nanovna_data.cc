@@ -1,6 +1,5 @@
-#include <iostream>
-#include <iomanip>
-#include "cuterf.h"
+#include <cuterf.h>
+#include "common.h"
 
 using namespace cuterf;
 
@@ -12,22 +11,6 @@ bool save_touchstone_to_file(const std::wstring &path, const std::string &touchs
     fwrite(touchstone.c_str(), 1, touchstone.length(), f);
     fclose(f);
     return true;
-}
-
-std::wstring current_date_time_for_filename()
-{
-    time_t now = time(NULL);
-    struct tm *timeinfo = localtime(&now);
-
-    std::wstringstream ss;
-    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_year % 100;
-    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_mon + 1;
-    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_mday;
-    ss << '_';
-    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_hour;
-    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_min;
-    ss << std::setw(2) << std::setfill(L'0') << timeinfo->tm_sec;
-    return ss.str();
 }
 
 int wmain(int argc, wchar_t** argv) 

@@ -7,6 +7,8 @@
 
 namespace cuterf {
 
+// --- NanoVNA ---------------------------------------------------------------
+
 namespace nanovna {
 
 constexpr uint16_t VID = 0x0483;
@@ -30,7 +32,11 @@ public:
     device();
     ~device();
 
+    bool is_open() const;
     std::wstring path() const;
+
+    bool open(const std::wstring &path = L"");
+    void close();
 
     std::string board_name() const;
     std::string firmware_info() const;
@@ -39,15 +45,44 @@ public:
     float edelay(); // in ps
     float s21offset(); // in dB
 
-    bool is_open() const;
-    bool open(const std::wstring &path = L"");
-    void close();
-
-    std::string capture_screenshot();
+    std::string capture_screenshot(size_t &width, size_t &height);
 
     std::vector<std::string> capture_header();
     std::vector<point> capture_data(unsigned ports);
     std::string capture_touchstone(unsigned ports);
+};
+
+};
+
+// --- TinySA ----------------------------------------------------------------
+
+namespace tinysa {
+
+constexpr uint16_t VID = 0x0483;
+constexpr uint16_t PID = 0x5740;
+
+class device_impl;
+
+class device 
+{
+private:
+    device_impl *m_i;
+
+public:
+    device();
+    ~device();
+
+    bool is_open() const;
+    std::wstring path() const;
+
+    bool open(const std::wstring &path = L"");
+    void close();
+
+    bool is_ultra() const;
+    std::string hardware_version() const;
+    std::string firmware_version() const;
+
+    std::string capture_screenshot(size_t &width, size_t &height);
 };
 
 };
