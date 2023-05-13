@@ -2,7 +2,9 @@
 #include <iostream>
 #include <iomanip>
 #include <png.h>
-#include "libnanovna.h"
+#include "cuterf.h"
+
+using namespace cuterf;
 
 static const std::string SOFTWARE_NAME = "https://github.com/VioletEternity/nanovna-tools";
 
@@ -38,7 +40,7 @@ struct screenshot
         return rgb24_data;
     }
 
-    void read_from_nanovna(libnanovna::nanovna &device)
+    void read_from_nanovna(nanovna::device &device)
     {
         std::string raw_data = device.capture_screenshot();
         for (size_t i = 0; i < raw_data.length(); i += 2)
@@ -176,7 +178,7 @@ int wmain(int argc, wchar_t** argv)
     screenshot screenshot;
     std::string source, creation_time, touchstone;
     try {
-        libnanovna::nanovna device;
+        nanovna::device device;
         if (!device.open()) {
             std::wcerr << L"Cannot find a connected NanoVNA!" << std::endl;
             return EXIT_FAILURE;

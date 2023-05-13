@@ -1,14 +1,16 @@
-#ifndef LIBNANOVNA_H
-#define LIBNANOVNA_H
+#ifndef LIBCUTERF_CUTERF_H
+#define LIBCUTERF_CUTERF_H
 
 #include <complex>
 #include <string>
 #include <vector>
 
-namespace libnanovna {
+namespace cuterf {
 
-constexpr uint16_t NANOVNA_VID = 0x0483;
-constexpr uint16_t NANOVNA_PID = 0x5740;
+namespace nanovna {
+
+constexpr uint16_t VID = 0x0483;
+constexpr uint16_t PID = 0x5740;
 
 struct point 
 {
@@ -17,16 +19,16 @@ struct point
     std::complex<float> s21;
 };
 
-class nanovna_impl;
+class device_impl;
 
-class nanovna 
+class device 
 {
 private:
-    nanovna_impl *m_i;
+    device_impl *m_i;
 
 public:
-    nanovna();
-    ~nanovna();
+    device();
+    ~device();
 
     std::wstring path() const;
 
@@ -50,4 +52,6 @@ public:
 
 };
 
-#endif // NANOVNA_H
+};
+
+#endif // LIBCUTERF_CUTERF_H

@@ -9,14 +9,9 @@ add_definitions(
     -D_UNICODE
     -D_CRT_SECURE_NO_WARNINGS)
 
-add_library(nanovna libnanovna.h libnanovna.cc)
-target_link_libraries(nanovna PRIVATE setupapi)
-
-add_executable(nanovna_screenshot nanovna_screenshot.cc)
-target_link_libraries(nanovna_screenshot PRIVATE nanovna PNG::PNG)
-
-add_executable(nanovna_extract nanovna_extract.cc)
-target_link_libraries(nanovna_extract PRIVATE PNG::PNG)
-
-add_executable(nanovna_data nanovna_data.cc)
-target_link_libraries(nanovna_data PRIVATE nanovna)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+    
+add_subdirectory(src/libcuterf)
+add_subdirectory(src/tools)

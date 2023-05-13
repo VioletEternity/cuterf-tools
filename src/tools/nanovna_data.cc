@@ -1,7 +1,8 @@
 #include <iostream>
 #include <iomanip>
+#include "cuterf.h"
 
-#include "libnanovna.h"
+using namespace cuterf;
 
 bool save_touchstone_to_file(const std::wstring &path, const std::string &touchstone)
 {
@@ -86,7 +87,7 @@ int wmain(int argc, wchar_t** argv)
 
     std::string touchstone;
     try {
-        libnanovna::nanovna device;
+        nanovna::device device;
         if (!device.open()) {
             std::wcerr << L"Cannot find a connected NanoVNA!" << std::endl;
             return EXIT_FAILURE;
